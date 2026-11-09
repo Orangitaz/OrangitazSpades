@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- two fanned playing cards, each with a spade -->
+    <group android:pivotX="54" android:pivotY="54" android:rotation="-16" android:translateX="-13">
+        <path android:fillColor="#FFFDF6" android:pathData="M43,33 h22 a3,3 0 0 1 3,3 v36 a3,3 0 0 1 -3,3 h-22 a3,3 0 0 1 -3,-3 v-36 a3,3 0 0 1 3,-3 z" />
+        <group android:translateX="44.4" android:translateY="43.6" android:scaleX="0.8" android:scaleY="0.8">
+            <group android:pivotX="12" android:pivotY="12" android:scaleY="-1">
+                <path android:fillColor="#16221B" android:pathData="M12,21 C12,21 3,14.5 3,8.6 C3,5.5 5.4,3.5 7.9,3.5 C9.6,3.5 11.2,4.4 12,6 C12.8,4.4 14.4,3.5 16.1,3.5 C18.6,3.5 21,5.5 21,8.6 C21,14.5 12,21 12,21 Z" />
+            </group>
+            <path android:fillColor="#16221B" android:pathData="M12,15 L9.6,22.5 L14.4,22.5 Z" />
+        </group>
+    </group>
+    <group android:pivotX="54" android:pivotY="54" android:rotation="12" android:translateX="13">
+        <path android:fillColor="#FFFDF6" android:pathData="M43,33 h22 a3,3 0 0 1 3,3 v36 a3,3 0 0 1 -3,3 h-22 a3,3 0 0 1 -3,-3 v-36 a3,3 0 0 1 3,-3 z" />
+        <group android:translateX="44.4" android:translateY="43.6" android:scaleX="0.8" android:scaleY="0.8">
+            <group android:pivotX="12" android:pivotY="12" android:scaleY="-1">
+                <path android:fillColor="#16221B" android:pathData="M12,21 C12,21 3,14.5 3,8.6 C3,5.5 5.4,3.5 7.9,3.5 C9.6,3.5 11.2,4.4 12,6 C12.8,4.4 14.4,3.5 16.1,3.5 C18.6,3.5 21,5.5 21,8.6 C21,14.5 12,21 12,21 Z" />
+            </group>
+            <path android:fillColor="#16221B" android:pathData="M12,15 L9.6,22.5 L14.4,22.5 Z" />
+        </group>
+    </group>
+</vector>

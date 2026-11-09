@@ -1,0 +1,1167 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0e4f5c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Spades">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Spades</title>
+<style>
+:root{--felt:#0e4f5c;--felt2:#093640;--card:#fffdf6;--red:#c62828;--gold:#e8c35a;--ink:#16221b}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;user-select:none;touch-action:manipulation}
+html,body{margin:0;height:100%;background:var(--felt2);color:#f3efe0;font-family:system-ui,-apple-system,Roboto,sans-serif}
+#app{max-width:520px;margin:0 auto;height:100%;display:flex;flex-direction:column;padding:6px 10px;gap:5px;overflow-y:auto;background:radial-gradient(ellipse at 50% 30%,var(--felt),var(--felt2))}
+button{font-family:inherit}
+/* top bar */
+#top{display:flex;justify-content:space-between;align-items:center}
+.chip{font-size:12px;background:#0006;border-radius:12px;padding:3px 10px}
+#menuBtn{background:#0006;color:#f3efe0;border:1px solid #fff3;border-radius:14px;padding:4px 12px;font-size:13px}
+/* score */
+#score{display:flex;gap:8px}
+#score:empty{display:none}
+.tm{flex:1;background:#0006;border-radius:10px;padding:4px 8px;display:flex;flex-direction:column;align-items:center;min-width:0}
+.tm.t0{box-shadow:inset 0 0 0 1px #4fc3f7aa}
+.tm.t1{box-shadow:inset 0 0 0 1px #ff4d6daa}
+.tm .n{font-size:12px;letter-spacing:.06em;opacity:.85;font-weight:700}
+.tm .big{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.tm small{font-size:11px;opacity:.8;text-align:center;min-height:13px}
+/* table */
+#table{flex:1;min-height:212px;display:grid;grid-template-columns:78px 1fr 78px;grid-template-rows:auto 1fr auto;gap:4px;position:relative}
+.seat{text-align:center;font-size:12px;border-radius:10px;padding:3px 2px;min-width:0}
+.seat.turn{box-shadow:0 0 0 2px var(--gold);background:#0004}
+.seat .nm{font-weight:700;font-size:13px}
+.seat .bd{opacity:.9;font-size:11px;min-height:14px;line-height:1.2}
+#seatN{grid-column:2;grid-row:1}
+#seatW{grid-column:1;grid-row:2;align-self:center}
+#seatE{grid-column:3;grid-row:2;align-self:center}
+#seatS{grid-column:1/4;grid-row:3;justify-self:center;padding:3px 14px}
+.badge{font-size:10px;background:var(--gold);color:#222;font-weight:800;border-radius:8px;padding:0 5px;margin-left:3px}
+.mini{display:inline-block;width:18px;height:26px;border-radius:3px;border:1px solid #fffdf6;background:repeating-linear-gradient(45deg,#2b4f9e,#2b4f9e 3px,#1e3a78 3px,#1e3a78 6px)}
+.fanrow{height:28px;display:flex;justify-content:center;margin-top:2px}
+.fanrow .mini{margin-left:-11px}.fanrow .mini:first-child{margin-left:0}
+.fancol{margin-top:3px;display:flex;align-items:center;justify-content:center;gap:4px;font-size:12px;opacity:.9}
+#trick{grid-column:2;grid-row:2;position:relative;min-height:128px}
+#trick .tc{position:absolute;width:44px}
+#trick .tc.n{left:50%;top:0;transform:translateX(-50%)}
+#trick .tc.s{left:50%;top:60px;transform:translateX(-50%)}
+#trick .tc.w{left:calc(50% - 62px);top:30px}
+#trick .tc.e{left:calc(50% + 18px);top:30px}
+#trick .tc.win .card{box-shadow:0 0 0 3px var(--gold),0 2px 6px #000a}
+#trick .brk{position:absolute;left:0;right:0;bottom:-2px;text-align:center;font-size:10px;opacity:.55}
+/* cards */
+.card{position:relative;width:44px;aspect-ratio:5/7;background:var(--card);border-radius:7px;color:var(--ink);box-shadow:0 1px 3px #0008;font-weight:700;overflow:hidden;flex:0 0 auto}
+.card .cr{position:absolute;left:3px;top:2px;display:flex;flex-direction:column;align-items:center;line-height:1;font-size:15px;min-width:14px}
+.card .cr i{font-style:normal;font-size:13px}
+.card .cs{position:absolute;right:4px;bottom:2px;font-size:26px;line-height:1}
+.card.red{color:var(--red)}
+.card.back{background:repeating-linear-gradient(45deg,#2b4f9e,#2b4f9e 5px,#1e3a78 5px,#1e3a78 10px);border:2px solid #fffdf6}
+#mine{display:flex;justify-content:center;min-height:100px;align-items:flex-end;padding-top:16px}
+#mine .card{transition:transform .12s,opacity .12s}
+#mine .card.ok{box-shadow:0 0 0 2px #8fd18f,0 1px 3px #0008}
+#mine .card.dim{opacity:.4}
+#mine .card.sel{transform:translateY(-16px);box-shadow:0 0 0 3px var(--gold),0 3px 6px #000a;opacity:1}
+#mine .card.hint{box-shadow:0 0 0 3px #4fc3f7,0 3px 8px #000a;opacity:1}
+#msg{text-align:center;min-height:32px;font-size:14px;display:flex;align-items:center;justify-content:center;padding:0 4px;line-height:1.25}
+#bidbar{display:none;align-items:center;justify-content:center;gap:6px;min-height:46px}
+#bidbar.on{display:flex}
+#bidbar button{border-radius:14px;border:1px solid var(--gold);background:#0006;color:#f3efe0;font-size:15px;font-weight:700;padding:11px 9px;min-width:44px}
+#bidbar button.hintb{border-color:#4fc3f7;color:#4fc3f7;font-size:13px}
+#bidbar button.go{background:var(--gold);color:#222;border:0;font-weight:800;padding:11px 18px;font-size:16px}
+#bidbar b{min-width:58px;text-align:center;font-size:26px;color:var(--gold)}
+#btnrow{display:flex;gap:8px;min-height:46px}
+#btnrow button{flex:1;border:0;border-radius:24px;padding:12px;font-size:16px;font-weight:800;background:var(--gold);color:#222}
+#btnrow button.alt{background:#0008;color:var(--gold);border:1px solid var(--gold)}
+#btnrow button:disabled{opacity:.35}
+#btnrow button.hide{display:none}
+#log{font-size:12px;opacity:.85;height:34px;overflow:hidden;text-align:center;line-height:1.35}
+#log div:last-child{color:var(--gold)}
+#ver{text-align:center;font-size:11px;opacity:.8;padding-bottom:2px}
+#ver a{color:var(--gold);text-decoration:underline;cursor:pointer}
+#ver b{color:var(--gold)}
+/* overlays */
+.ov{position:fixed;inset:0;background:#000b;display:none;align-items:center;justify-content:center;padding:14px;z-index:5;overflow:auto}
+.ov.on{display:flex}
+#ov2{z-index:6}
+.panel{background:var(--felt);border:2px solid var(--gold);border-radius:14px;padding:14px;width:100%;max-width:440px;max-height:100%;overflow:auto}
+.panel h2{margin:0 0 8px;font-size:17px;color:var(--gold)}
+.panel h3{margin:0 0 4px;font-size:14px;color:var(--gold);text-align:center}
+.panel ul{list-style:none;margin:0 0 8px;padding:0;font-size:13px}
+.panel li{display:flex;justify-content:space-between;gap:6px;padding:3px 0;border-bottom:1px solid #fff2}
+.panel .tot{font-size:20px;font-weight:800;text-align:center;margin-bottom:2px}
+.panel p{margin:4px 0 10px;text-align:center}
+.panel .lbl{font-size:13px;margin:10px 0 4px;opacity:.9}
+.panel .lbl small{opacity:.7}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:6px}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--gold);background:#0006;color:#f3efe0;font-size:14px}
+.seg button.on{background:var(--gold);color:#222;font-weight:800}
+.chk{display:flex;align-items:center;gap:8px;margin:12px 0;font-size:14px}
+.chk input{width:20px;height:20px}
+.gold,.opt{display:block;width:100%;border-radius:24px;padding:12px;font-size:16px;font-weight:800;margin-top:8px;border:0}
+.gold{background:var(--gold);color:#222}
+.opt{background:#0008;color:var(--gold);border:1px solid var(--gold)}
+.opt.warn{background:#7a1f1f;color:#fff;border-color:#c66}
+.sub{font-size:12px;opacity:.75;margin-top:4px;text-align:center}
+.sect{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold);margin:14px 0 2px;opacity:.9;border-top:1px solid #fff2;padding-top:8px}
+.sect:first-of-type{border-top:0;margin-top:4px}
+.home{text-align:center;margin:6px 0 14px}
+.home .logo{font-size:26px;letter-spacing:6px;color:var(--gold)}
+.home h1{margin:4px 0 0;font-size:34px;letter-spacing:1px}
+.home .tag{font-size:13px;opacity:.75}
+.gold small{display:block;font-size:12px;font-weight:600;opacity:.75;margin-top:2px}
+/* popup */
+#pop{position:absolute;left:0;right:0;top:34%;display:flex;justify-content:center;pointer-events:none;z-index:2}
+#pop .pop{background:#000c;border:2px solid var(--gold);color:var(--gold);padding:5px 12px;border-radius:18px;font-weight:800;font-size:15px;animation:popup 1.4s ease-out forwards}
+#pop .pop.p1{border-color:#ff4d6d;color:#ffb3c0}
+body.fast #pop .pop{animation-duration:.7s}
+@keyframes popup{0%{opacity:0;transform:translateY(10px) scale(.7)}12%{opacity:1;transform:translateY(0) scale(1.08)}22%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-18px)}}
+/* display options */
+body.fourc .card.s0{color:var(--ink)}
+body.fourc .card.s1{color:var(--red)}
+body.fourc .card.s2{color:#1565c0}
+body.fourc .card.s3{color:#2e7d32}
+body.large .card .cr{font-size:19px;min-width:18px}
+body.large .card .cr i{font-size:16px}
+body.large #msg{font-size:16px}
+body.large #log{font-size:14px;height:40px}
+body.large .seat{font-size:13px}
+body.large .seat .bd{font-size:12px}
+body.large #btnrow button{font-size:18px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="top"><span class="chip" id="lvl"></span><button id="menuBtn">☰ Menu</button></div>
+  <div id="score"></div>
+  <div id="table">
+    <div id="pop"></div>
+    <div class="seat" id="seatN"></div>
+    <div class="seat" id="seatW"></div>
+    <div id="trick"></div>
+    <div class="seat" id="seatE"></div>
+    <div class="seat" id="seatS"></div>
+  </div>
+  <div id="msg"></div>
+  <div id="bidbar"></div>
+  <div id="mine"></div>
+  <div id="btnrow"><button id="btn" class="hide"></button><button id="btn2" class="alt hide">Hint</button></div>
+  <div id="log"></div>
+  <div id="ver"></div>
+</div>
+<div class="ov" id="ov"><div class="panel" id="panel"></div></div>
+<div class="ov" id="ov2"><div class="panel" id="panel2"></div></div>
+
+<script>
+// ==LOGIC==
+// Seats go clockwise: 0 You (bottom), 1 West (left), 2 Partner (top), 3 East (right). Teams: seats 0 and 2 against 1 and 3.
+// Suit codes: 0 spades (trump), 1 hearts, 2 diamonds, 3 clubs. Ranks 2..14 (14 = ace).
+const SUITS=['♠','♥','♦','♣'];
+const RANKS=['','','2','3','4','5','6','7','8','9','10','J','Q','K','A'];
+const key=c=>c.r+'-'+c.s;
+const SORT=[0,1,3,2];                                   // hand order: spades, hearts, clubs, diamonds (black and red alternate)
+const cmpHand=(a,b)=>SORT[a.s]-SORT[b.s]||b.r-a.r;
+function newDeck(){const d=[];for(let s=0;s<4;s++)for(let r=2;r<=14;r++)d.push({r,s});return d}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+// Bit masks of the ranks that have been played, one per suit.
+function maskOf(cards){const m=[0,0,0,0];for(const c of cards)m[c.s]|=1<<c.r;return m}
+
+/* ---------- rules ---------- */
+// Cards you may play: follow the suit led if you can; spades cannot lead until they are broken (unless you hold only spades).
+function legalPlays(hand,trick,broken){
+  if(!trick.length){
+    if(broken)return hand.slice();
+    const off=hand.filter(c=>c.s!==0);
+    return off.length?off:hand.slice();
+  }
+  const led=trick[0].card.s,f=hand.filter(c=>c.s===led);
+  return f.length?f:hand.slice();
+}
+// Does card a beat card b, where b is the card currently winning the trick?
+function beats(a,b){return a.s===b.s?a.r>b.r:a.s===0}
+function curWinner(trick){let w=trick[0];for(let i=1;i<trick.length;i++)if(beats(trick[i].card,w.card))w=trick[i];return w}
+const trickWinner=trick=>curWinner(trick).seat;
+
+// A team's score for one hand. bids[seat]: 0 = nil. Tricks won by a nil bidder never count towards the bid:
+// a failed nil costs 100 (200 blind) and its tricks become bags. Every 10 bags cost 100.
+function scoreTeam(t,bids,blind,tricks,bagsBefore){
+  const seats=[t,t+2],items=[];
+  let raw=0,bagsNew=0;
+  const reg=seats.filter(s=>bids[s]>0),nil=seats.filter(s=>bids[s]===0);
+  const bid=reg.reduce((a,s)=>a+bids[s],0),took=reg.reduce((a,s)=>a+tricks[s],0);
+  if(bid>0){
+    if(took>=bid){
+      const over=took-bid;raw+=10*bid+over;bagsNew+=over;
+      items.push({t:`Bid ${bid}, took ${took}${over?` (${over} bag${over>1?'s':''})`:''}`,p:10*bid+over});
+    }else{raw-=10*bid;items.push({t:`Bid ${bid}, took ${took} — set`,p:-10*bid})}
+  }
+  let nilMade=0,nilFailed=0;
+  for(const s of nil){
+    const v=blind[s]?200:100,name=blind[s]?'blind nil':'nil';
+    if(tricks[s]===0){raw+=v;nilMade++;items.push({t:`${cap0(name)} made`,p:v,seat:s})}
+    else{raw-=v;nilFailed++;bagsNew+=tricks[s];items.push({t:`${cap0(name)} failed (took ${tricks[s]})`,p:-v,seat:s})}
+  }
+  let bags=bagsBefore+bagsNew,pen=0;
+  while(bags>=10){bags-=10;pen+=100}
+  if(pen)items.push({t:'10 bags',p:-pen});
+  return{bid,took,raw,bagsNew,bags,pen,pts:raw-pen,items,set:bid>0&&took<bid,nilMade,nilFailed};
+}
+function cap0(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+// First to the target wins; at -200 or lower a team loses. Both over the target: the higher score wins (a tie plays on).
+function gameWinner(scores,target){
+  const a=scores[0],b=scores[1];
+  if(a>=target||b>=target){
+    if(a>=target&&b>=target)return a===b?null:(a>b?0:1);
+    return a>=target?0:1;
+  }
+  if(a<=-200&&b>-200)return 1;
+  if(b<=-200&&a>-200)return 0;
+  return null;
+}
+// What the AI tries to maximise: points for the hand, with every bag costing 10 (the penalty it will cause later).
+function diffFor(team,bids,blind,tricks,bags){
+  const a=scoreTeam(team,bids,blind,tricks,bags[team]),b=scoreTeam(1-team,bids,blind,tricks,bags[1-team]);
+  return(a.raw-10*a.bagsNew)-(b.raw-10*b.bagsNew);
+}
+
+/* ---------- playing AI ---------- */
+function isMaster(c,hand,pm){
+  for(let r=c.r+1;r<=14;r++){
+    if(pm[c.s]&(1<<r))continue;
+    if(hand.some(h=>h.s===c.s&&h.r===r))continue;
+    return false;
+  }
+  return true;
+}
+const worth=c=>c.r+(c.s===0?20:0);                      // spades are worth more than any other card
+function lowestOf(a){let b=a[0];for(let i=1;i<a.length;i++)if(worth(a[i])<worth(b))b=a[i];return b}
+function highestOf(a){let b=a[0];for(let i=1;i<a.length;i++)if(worth(a[i])>worth(b))b=a[i];return b}
+function suitCount(hand,s){let n=0;for(const c of hand)if(c.s===s)n++;return n}
+// Try not to win the trick: throw the highest card that still loses; if every card wins, the lowest.
+function duck(legal,w){
+  if(!w)return lowestOf(legal);
+  const losers=legal.filter(c=>!beats(c,w.card));
+  return losers.length?highestOf(losers):lowestOf(legal);
+}
+// Rule-of-thumb play. v: {seat,hand,trick,broken,bids,tricks,pm}. Also the policy the Hard NPC plays out hands with.
+function greedyPlay(v){
+  const{seat,hand,trick,broken,bids,tricks,pm}=v;
+  const legal=legalPlays(hand,trick,broken);
+  if(legal.length===1)return legal[0];
+  const part=(seat+2)%4,lho=(seat+1)%4,rho=(seat+3)%4,w=trick.length?curWinner(trick):null;
+  const t=seat%2;let bid=0,took=0;
+  for(const s of[t,t+2])if(bids[s]>0){bid+=bids[s];took+=tricks[s]}
+  let need=Math.max(0,bid-took);
+  const nilLive=s=>bids[s]===0&&tricks[s]===0;
+  const played=s=>trick.some(x=>x.seat===s);
+  if(bids[seat]===0)return duck(legal,w);                                   // my own nil: never take a trick
+  if(nilLive(part)){                                                         // cover my partner's nil
+    if(w&&w.seat===part){const win=legal.filter(c=>beats(c,w.card));return win.length?lowestOf(win):lowestOf(legal)}
+    need=Math.max(need,1);
+  }
+  if(w&&(w.seat===lho||w.seat===rho)&&nilLive(w.seat))return lowestOf(legal); // let an opposing nil bidder keep a trick
+  if(need===0){
+    if([lho,rho].some(s=>nilLive(s)&&!played(s)))return lowestOf(legal);       // stay low so an opposing nil can be forced to win
+    return duck(legal,w);                                                      // contract made: dodge bags
+  }
+  if(!w){                                                                    // leading, and tricks are needed
+    const masters=legal.filter(c=>c.s!==0&&isMaster(c,hand,pm));
+    if(masters.length){
+      let best=masters[0];
+      for(const c of masters){const a=suitCount(hand,c.s),b=suitCount(hand,best.s);if(a<b||(a===b&&c.r>best.r))best=c}
+      return best;
+    }
+    const sm=legal.filter(c=>c.s===0&&isMaster(c,hand,pm));
+    if(sm.length&&(broken||legal.every(c=>c.s===0)))return highestOf(sm);
+    const off=legal.filter(c=>c.s!==0);
+    if(off.length){
+      let bs=-1,bn=-1;
+      for(let s=1;s<4;s++){const n=suitCount(hand,s);if(n>bn&&off.some(c=>c.s===s)){bn=n;bs=s}}
+      return lowestOf(off.filter(c=>c.s===bs));
+    }
+    return highestOf(legal);
+  }
+  if(w.seat===part)return lowestOf(legal);                                   // partner is winning: keep my strength
+  const winners=legal.filter(c=>beats(c,w.card));
+  return winners.length?lowestOf(winners):lowestOf(legal);
+}
+
+/* ---------- bidding AI ---------- */
+// Rough number of tricks a hand should win: honours, long spades, side-suit aces and kings, and ruffing from short suits.
+function bidEstimate(hand){
+  const by=[[],[],[],[]];for(const c of hand)by[c.s].push(c.r);
+  by.forEach(a=>a.sort((x,y)=>y-x));
+  const n=by[0].length;
+  let sp=0;
+  for(const r of by[0]){
+    if(r===14)sp+=1;
+    else if(r===13)sp+=n>=2?0.95:0.4;
+    else if(r===12)sp+=n>=3?0.8:(n===2?0.35:0.1);
+    else if(r===11)sp+=n>=4?0.55:0.1;
+    else if(r===10)sp+=n>=5?0.4:0;
+  }
+  if(n>4)sp+=(n-4)*0.9;
+  let off=0,voids=0,singles=0;
+  for(let s=1;s<4;s++){
+    const a=by[s],len=a.length;
+    if(len===0){voids++;continue}
+    if(len===1)singles++;
+    const hasA=a[0]===14,hasK=a.includes(13);
+    if(hasA)off+=len>=6?0.8:1;
+    if(hasK)off+=len>=2?(hasA?0.8:0.55):0.2;
+    if(a.includes(12))off+=len>=3&&(hasA||hasK)?0.5:(len>=3?0.2:0.05);
+  }
+  let ruff=0;
+  if(n>=3)ruff=voids+singles*0.5;
+  else if(n===2)ruff=voids*0.5;
+  ruff=Math.min(ruff,Math.max(0,n-1));
+  return{est:sp+off+ruff,sp,off,ruff};
+}
+// How likely a hand is to be forced into winning a trick: high cards that cannot be ducked. Low is good for nil.
+function nilDanger(hand){
+  const by=[[],[],[],[]];for(const c of hand)by[c.s].push(c.r);
+  by.forEach(a=>a.sort((x,y)=>y-x));
+  let d=0;
+  for(const r of by[0])d+=r>=14?2:r===13?1.6:r===12?1.2:r===11?0.9:r===10?0.5:r===9?0.25:0;
+  if(by[0].length>=5)d+=0.3*(by[0].length-4);
+  for(let s=1;s<4;s++){
+    const a=by[s];
+    a.forEach((r,i)=>{
+      const below=a.length-1-i;
+      if(r===14)d+=1.5;
+      else if(r===13)d+=below>=2?0.5:1.1;
+      else if(r===12)d+=below>=2?0.25:0.7;
+      else if(r===11)d+=below>=2?0.1:0.35;
+      else if(r===10)d+=below>=1?0:0.15;
+    });
+  }
+  return d;
+}
+// Play the rest of a hand out with the rule-of-thumb policy. S: {hands,trick,lead,broken,bids,tricks,pm}; fills in S.tricks.
+function finishRound(S){
+  const{hands,bids,tricks}=S;
+  while(true){
+    if(S.trick.length===4){const w=trickWinner(S.trick);tricks[w]++;S.lead=w;S.trick=[]}
+    const seat=(S.lead+S.trick.length)%4,h=hands[seat];
+    if(!h.length)break;
+    const c=greedyPlay({seat,hand:h,trick:S.trick,broken:S.broken,bids,tricks,pm:S.pm});
+    h.splice(h.indexOf(c),1);
+    S.trick.push({seat,card:c});S.pm[c.s]|=1<<c.r;if(c.s===0)S.broken=true;
+  }
+}
+// Hard bidding: try each sensible bid (and nil) on random deals of the unseen cards and keep the best average.
+function bidByRollout(hand,o){
+  const seat=o.seat,e=bidEstimate(hand),d=nilDanger(hand);
+  const base=Math.max(1,Math.min(13,Math.round(e.est)));
+  const set=new Set();
+  for(let b=Math.max(1,base-2);b<=Math.min(13,base+1);b++)set.add(b);
+  if(d<=2.4&&e.est<=2.8)set.add(0);
+  const cands=[...set];
+  const have=new Set(hand.map(key));
+  const unseen=newDeck().filter(c=>!have.has(key(c)));
+  const N=o.samples||36,tot=cands.map(()=>0),team=seat%2,first=(o.dealer+1)%4;
+  const bags=o.bags||[0,0];
+  for(let k=0;k<N;k++){
+    shuffle(unseen);
+    const hs=[[],[],[],[]];hs[seat]=hand;
+    let p=0;for(let s=0;s<4;s++){if(s===seat)continue;hs[s]=unseen.slice(p,p+13);p+=13}
+    const others=[0,0,0,0];
+    for(let s=0;s<4;s++)if(s!==seat&&(!o.bids||o.bids[s]===null||o.bids[s]===undefined))others[s]=chooseBid(hs[s],{level:'normal'}).bid;
+    for(let ci=0;ci<cands.length;ci++){
+      const bids=[0,0,0,0];
+      for(let s=0;s<4;s++)bids[s]=s===seat?cands[ci]:(o.bids&&o.bids[s]!==null&&o.bids[s]!==undefined?o.bids[s]:others[s]);
+      const blind=o.blind?o.blind.slice():[false,false,false,false];
+      const S={hands:hs.map(h=>h.slice()),trick:[],lead:first,broken:false,bids,tricks:[0,0,0,0],pm:[0,0,0,0]};
+      finishRound(S);
+      tot[ci]+=diffFor(team,bids,blind,S.tricks,bags);
+    }
+  }
+  const ranked=cands.map((b,i)=>({bid:b,v:tot[i]/N})).sort((a,b)=>b.v-a.v);
+  return{bid:ranked[0].bid,est:e.est,danger:d,ranked};
+}
+// o: {level, seat, dealer, bids, blind, bags}. Returns {bid, est, danger}; bid 0 = nil.
+function chooseBid(hand,o){
+  const level=o.level||'normal',e=bidEstimate(hand),d=nilDanger(hand);
+  const base=Math.max(1,Math.min(13,Math.round(e.est)));
+  const res=b=>({bid:b,est:e.est,danger:d});
+  if(level==='easy'){
+    if(d<=0.3&&e.est<1.2&&Math.random()<0.6)return res(0);
+    return res(Math.max(1,Math.min(13,Math.round(e.est+(Math.random()-0.5)*2.4))));
+  }
+  if(level==='hard'&&o.seat!==undefined)return bidByRollout(hand,o);
+  if(d<=0.9&&e.est<=1.8)return res(0);
+  return res(base);
+}
+// Hard NPCs sometimes gamble on a blind nil when their side is far behind.
+function wantsBlindNil(o){
+  return o.level==='hard'&&!!o.blindOk&&o.deficit>=200&&!(o.partnerBid===0)&&Math.random()<0.5;
+}
+
+/* ---------- Hard playing AI: look ahead over random deals of the unseen cards ---------- */
+// Deal the unseen cards to the other seats. cnt[s] = cards seat s holds; voids[s][suit] = 1 when s is known to have none.
+function dealUnseen(unseen,cnt,voids){
+  for(let attempt=0;attempt<25;attempt++){
+    const hs=[[],[],[],[]],left=cnt.slice();
+    const cards=shuffle(unseen.slice());
+    const nOK=c=>{let n=0;for(let s=0;s<4;s++)if(cnt[s]>0&&!(voids&&voids[s]&&voids[s][c.s]))n++;return n};
+    const order=cards.map(c=>({c,n:nOK(c)})).sort((a,b)=>a.n-b.n).map(x=>x.c);
+    let ok=true;
+    for(const c of order){
+      let tot=0;
+      for(let s=0;s<4;s++)if(left[s]>0&&!(voids&&voids[s]&&voids[s][c.s]))tot+=left[s];
+      if(!tot){ok=false;break}
+      let r=Math.random()*tot,pick=-1;
+      for(let s=0;s<4;s++){
+        if(left[s]>0&&!(voids&&voids[s]&&voids[s][c.s])){r-=left[s];if(r<0){pick=s;break}}
+      }
+      if(pick<0)for(let s=0;s<4;s++)if(left[s]>0&&!(voids&&voids[s]&&voids[s][c.s])){pick=s;break}
+      hs[pick].push(c);left[pick]--;
+    }
+    if(ok)return hs;
+  }
+  const hs=[[],[],[],[]],left=cnt.slice(),cards=shuffle(unseen.slice());   // fallback: ignore the voids
+  for(const c of cards){for(let s=0;s<4;s++)if(left[s]>0){hs[s].push(c);left[s]--;break}}
+  return hs;
+}
+function playOut(v,hs,first){
+  const seat=v.seat;
+  const S={hands:hs.map(h=>h.slice()),trick:v.trick.slice(),lead:v.lead,broken:v.broken,bids:v.bids,tricks:v.tricks.slice(),pm:v.pm.slice()};
+  const h=S.hands[seat];h.splice(h.indexOf(first),1);
+  S.trick.push({seat,card:first});S.pm[first.s]|=1<<first.r;if(first.s===0)S.broken=true;
+  finishRound(S);
+  return diffFor(seat%2,v.bids,v.blind,S.tricks,v.bags);
+}
+// Rank the legal plays by average points (our team minus theirs) over random deals. v adds to greedyPlay's view:
+// {lead, blind, voids, done, bags}. Returns [{c,v}] best first, or null when there is only one legal card.
+function rankPlays(v,o){
+  o=o||{};
+  const legal=legalPlays(v.hand,v.trick,v.broken);
+  if(legal.length<2)return null;
+  const seat=v.seat;
+  const unseen=[];
+  for(let s=0;s<4;s++)for(let r=2;r<=14;r++){
+    if(v.pm[s]&(1<<r))continue;
+    if(v.hand.some(c=>c.s===s&&c.r===r))continue;
+    unseen.push({r,s});
+  }
+  const cnt=[0,0,0,0];let sum=0;
+  for(let s=0;s<4;s++)if(s!==seat){cnt[s]=13-v.done-(v.trick.some(t=>t.seat===s)?1:0);sum+=cnt[s]}
+  if(sum!==unseen.length)return null;
+  const rem=v.hand.length;
+  const N=o.samples||(rem>=11?24:rem>=8?40:rem>=5?70:110);
+  const tot=legal.map(()=>0);
+  for(let k=0;k<N;k++){
+    const hs=dealUnseen(unseen,cnt,v.voids);hs[seat]=v.hand;
+    for(let i=0;i<legal.length;i++)tot[i]+=playOut(v,hs,legal[i]);
+  }
+  return legal.map((c,i)=>({c,v:tot[i]/N+(o.det?0:Math.random()*0.001)})).sort((a,b)=>b.v-a.v);
+}
+
+/* ---------- plain-language reasons shown with hints ---------- */
+const cs=c=>RANKS[c.r]+SUITS[c.s];
+function explainBid(hand,r){
+  const e=bidEstimate(hand),f=x=>x.toFixed(1);
+  let t=r.bid===0
+    ?`bid Nil. You have very few high cards (risk ${f(r.danger)}), so you can probably dodge every trick. It pays 100, and costs 100 if you take one.`
+    :`bid ${r.bid}. Your hand is worth about ${f(e.est)} tricks: spades ${f(e.sp)}, side-suit aces and kings ${f(e.off)}${e.ruff?`, ruffing ${f(e.ruff)}`:''}.`;
+  if(r.ranked&&r.ranked.length>1&&r.bid!==(r.bid===0?0:Math.max(1,Math.round(e.est))))t+=' Playing out likely deals, this scores best on average.';
+  return t;
+}
+function explainPlay(v,ranked){
+  const legal=legalPlays(v.hand,v.trick,v.broken);
+  if(legal.length===1)return 'it is your only legal card.';
+  const c=ranked?ranked[0].c:legal[0],w=v.trick.length?curWinner(v.trick):null,seat=v.seat,part=(seat+2)%4;
+  let why;
+  if(v.bids[seat]===0)why=w&&beats(c,w.card)?'it is the least risky card for your nil.':'it keeps you from taking a trick, which protects your nil.';
+  else if(w&&w.seat===part&&!beats(c,w.card))why='your partner is already winning, so it saves your stronger cards.';
+  else if(w&&beats(c,w.card))why=v.trick.length===3?'it wins the trick.':'it takes the lead in this trick.';
+  else if(w)why='you cannot win this trick, so it gives up your weakest card.';
+  else if(c.s===0)why='it leads trump while it still counts.';
+  else why=isMaster(c,v.hand,v.pm)?'it is the highest card left in its suit.':'it is the safest lead.';
+  let t=why;
+  if(ranked&&ranked.length>1){
+    const f=x=>(x>=0?'+':'')+x.toFixed(1);
+    t+=` Playing out likely deals, it nets about ${f(ranked[0].v)} points this hand, against ${f(ranked[1].v)} for the next best.`;
+  }
+  return t;
+}
+
+function cmpVer(a,b){
+  const x=String(a).split('.').map(n=>parseInt(n,10)||0),y=String(b).split('.').map(n=>parseInt(n,10)||0);
+  for(let i=0;i<Math.max(x.length,y.length);i++){const d=(x[i]||0)-(y[i]||0);if(d)return d>0?1:-1}
+  return 0;
+}
+
+/* ---------- stats (pure; saved by the UI) ---------- */
+function emptyStats(){
+  return{games:0,w:0,l:0,streak:0,bestStreak:0,rounds:0,bidsN:0,bidsMade:0,nilN:0,nilMade:0,blindN:0,blindMade:0,
+    setsFor:0,setsAgainst:0,bags:0,bestMargin:0,
+    byDiff:{easy:{w:0,l:0},normal:{w:0,l:0},hard:{w:0,l:0}}};
+}
+function mergeStats(raw){
+  const d=emptyStats();
+  if(!raw||typeof raw!=='object')return d;
+  for(const k of Object.keys(d)){
+    if(k==='byDiff'){
+      for(const l of['easy','normal','hard']){
+        const r=raw.byDiff&&raw.byDiff[l];
+        if(r){d.byDiff[l].w=+r.w||0;d.byDiff[l].l=+r.l||0}
+      }
+    }else if(typeof raw[k]==='number'&&isFinite(raw[k]))d[k]=raw[k];
+  }
+  return d;
+}
+// r: {bid, blind, took (your own), res: [scoreTeam for us, scoreTeam for them]}
+function recordRound(st,r){
+  st.rounds++;
+  if(r.bid>0){st.bidsN++;if(r.took>=r.bid)st.bidsMade++}
+  else{
+    st.nilN++;if(r.took===0)st.nilMade++;
+    if(r.blind){st.blindN++;if(r.took===0)st.blindMade++}
+  }
+  if(r.res[1].set)st.setsFor++;
+  if(r.res[0].set)st.setsAgainst++;
+  st.bags+=r.res[0].bagsNew;
+}
+function recordGame(st,g){
+  st.games++;
+  const d=st.byDiff[g.level]||(st.byDiff[g.level]={w:0,l:0});
+  if(g.won){st.w++;d.w++;st.streak++;st.bestStreak=Math.max(st.bestStreak,st.streak);st.bestMargin=Math.max(st.bestMargin,g.margin||0)}
+  else{st.l++;d.l++;st.streak=0}
+}
+
+/* ---------- saved game ---------- */
+const SAVE_KEYS=['scores','bags','dealer','level','target','blindOpt','hands','bids','blind','tricks','trick','lead','broken',
+  'played','voids','stage','reveal','log'];
+const isCard=c=>!!c&&Number.isInteger(c.r)&&c.r>=2&&c.r<=14&&Number.isInteger(c.s)&&c.s>=0&&c.s<=3;
+const isCards=a=>Array.isArray(a)&&a.length<=52&&a.every(isCard);
+function packGame(g){
+  const o={v:1};
+  for(const k of SAVE_KEYS)o[k]=g[k];
+  return JSON.parse(JSON.stringify(o));
+}
+// Returns a clean copy of a saved game, or null if it is not usable.
+function unpackGame(o){
+  try{
+    if(!o||o.v!==1)return null;
+    const four=a=>Array.isArray(a)&&a.length===4;
+    if(!four(o.hands)||!o.hands.every(isCards))return null;
+    if(!Array.isArray(o.scores)||o.scores.length!==2||!o.scores.every(Number.isFinite))return null;
+    if(!Array.isArray(o.bags)||o.bags.length!==2||!o.bags.every(n=>Number.isInteger(n)&&n>=0&&n<10))return null;
+    if(!Number.isInteger(o.dealer)||o.dealer<0||o.dealer>3)return null;
+    if(!['easy','normal','hard'].includes(o.level)||(o.target!==250&&o.target!==500))return null;
+    if(o.stage!=='bid'&&o.stage!=='play')return null;
+    if(!four(o.bids)||!o.bids.every(b=>b===null||(Number.isInteger(b)&&b>=0&&b<=13)))return null;
+    if(!four(o.blind)||!o.blind.every(b=>typeof b==='boolean'))return null;
+    if(!four(o.tricks)||!o.tricks.every(n=>Number.isInteger(n)&&n>=0&&n<=13))return null;
+    if(!isCards(o.played)||o.played.length%4)return null;
+    if(!Array.isArray(o.trick)||o.trick.length>4||!o.trick.every(t=>t&&Number.isInteger(t.seat)&&t.seat>=0&&t.seat<4&&isCard(t.card)))return null;
+    if(!Number.isInteger(o.lead)||o.lead<0||o.lead>3)return null;
+    if(!four(o.voids)||!o.voids.every(a=>Array.isArray(a)&&a.length===4&&a.every(x=>x===0||x===1)))return null;
+    const done=o.played.length/4;
+    if(o.tricks.reduce((a,b)=>a+b,0)!==done)return null;
+    const all=[...o.hands.flat(),...o.played,...o.trick.map(t=>t.card)];
+    if(all.length!==52||new Set(all.map(key)).size!==52)return null;
+    for(let i=0;i<o.trick.length;i++)if(o.trick[i].seat!==(o.lead+i)%4)return null;
+    if(o.stage==='bid'){
+      if(done||o.trick.length||o.hands.some(h=>h.length!==13))return null;
+    }else{
+      if(o.bids.some(b=>b===null))return null;
+      for(let s=0;s<4;s++){
+        const exp=13-done-(o.trick.some(t=>t.seat===s)?1:0);
+        if(o.hands[s].length!==exp)return null;
+      }
+    }
+    const c=JSON.parse(JSON.stringify(o));
+    c.blindOpt=!!o.blindOpt;c.reveal=!!o.reveal;
+    c.log=Array.isArray(o.log)?o.log.filter(x=>typeof x==='string').slice(-2):[];
+    return c;
+  }catch(e){return null}
+}
+// ==END LOGIC==
+
+/* ---------- UI + game flow ---------- */
+const $=id=>document.getElementById(id);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const NAMES=['You','West','Partner','East'];
+const who=s=>NAMES[s];
+const fmt=cs;
+let G=null,GEN=0,leaveOpen=false;
+// The Android app injects AndroidBridge (vibration, keep-screen-on, exit); in a browser it does not exist.
+const bridge=()=>typeof AndroidBridge!=='undefined'?AndroidBridge:null;
+
+/* settings + stats storage */
+const DEFAULTS={level:'normal',target:500,blindNil:false,fast:false,sound:true,haptics:true,keepAwake:true,fourColor:false,large:false};
+function loadSettings(){
+  const d={...DEFAULTS};
+  try{
+    const s=JSON.parse(localStorage.getItem('spades-settings'))||{};
+    if(['easy','normal','hard'].includes(s.level))d.level=s.level;
+    if(s.target===250||s.target===500)d.target=s.target;
+    for(const k of['blindNil','fast','sound','haptics','keepAwake','fourColor','large'])if(typeof s[k]==='boolean')d[k]=s[k];
+  }catch(e){}
+  return d;
+}
+let settings=loadSettings();
+function saveSettings(){try{localStorage.setItem('spades-settings',JSON.stringify(settings))}catch(e){}}
+function applySettings(){
+  const c=document.body.classList;
+  c.toggle('fast',!!settings.fast);c.toggle('fourc',!!settings.fourColor);c.toggle('large',!!settings.large);
+  const b=bridge();if(b&&b.setKeepScreenOn){try{b.setKeepScreenOn(!!settings.keepAwake)}catch(e){}}
+}
+const pause=ms=>sleep(settings.fast?Math.min(ms,120):ms);
+
+function loadStats(){
+  try{const raw=localStorage.getItem('spades-stats');if(raw)return mergeStats(JSON.parse(raw))}catch(e){}
+  return emptyStats();
+}
+let stats=loadStats();
+function saveStats(){try{localStorage.setItem('spades-stats',JSON.stringify(stats))}catch(e){}}
+
+/* saved game: checkpoints are written as play goes on, so a closed or killed app can pick up where it left off */
+function saveGame(){
+  if(!G||G.over||!(G.stage==='bid'||G.stage==='play'))return;
+  try{localStorage.setItem('spades-save',JSON.stringify(packGame(G)))}catch(e){}
+}
+function clearSave(){try{localStorage.removeItem('spades-save')}catch(e){}}
+function loadSave(){try{const raw=localStorage.getItem('spades-save');return raw?unpackGame(JSON.parse(raw)):null}catch(e){return null}}
+
+/* sound and vibration (tones are generated, there are no audio files) */
+let actx=null;
+function audio(){
+  try{
+    if(!settings.sound)return null;
+    const AC=typeof AudioContext!=='undefined'?AudioContext:(typeof webkitAudioContext!=='undefined'?webkitAudioContext:null);
+    if(!AC)return null;
+    if(!actx)actx=new AC();
+    if(actx.state==='suspended')actx.resume();
+    return actx;
+  }catch(e){return null}
+}
+function tone(freq,dur,when=0,type='sine',vol=0.12){
+  try{
+    const a=audio();if(!a)return;
+    const t=a.currentTime+when,o=a.createOscillator(),g=a.createGain();
+    o.type=type;o.frequency.value=freq;
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(vol,t+0.01);g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.connect(g);g.connect(a.destination);o.start(t);o.stop(t+dur+0.03);
+  }catch(e){}
+}
+function sfx(kind,n){
+  if(kind==='play')tone(380,0.05,0,'triangle',0.09);
+  else if(kind==='trick'){if(n){tone(520,0.1);tone(660,0.12,0.08)}else tone(260,0.12,0,'sine',0.07)}
+  else if(kind==='round'){const up=n>0;[up?440:330,up?554:262,up?660:220].forEach((f,i)=>tone(f,0.16,i*0.1,'triangle',0.1))}
+  else if(kind==='win'){[523,659,784,1046].forEach((f,i)=>tone(f,0.22,i*0.14,'triangle',0.14))}
+  else if(kind==='lose'){[392,330,262].forEach((f,i)=>tone(f,0.28,i*0.2,'sine',0.1))}
+}
+function buzz(ms){
+  if(!settings.haptics)return;
+  try{
+    const b=bridge();
+    if(b&&b.vibrate)b.vibrate(ms);
+    else if(typeof navigator!=='undefined'&&navigator.vibrate)navigator.vibrate(ms);
+  }catch(e){}
+}
+
+/* cards */
+function cardEl(c,cls='',i=null,style=''){
+  const red=c.s===1||c.s===2?' red':'';
+  return `<div${i===null?'':` data-i="${i}"`} class="card${red} s${c.s} ${cls}"${style?` style="${style}"`:''}><span class="cr">${RANKS[c.r]}<i>${SUITS[c.s]}</i></span><span class="cs">${SUITS[c.s]}</span></div>`;
+}
+function status(t){$('msg').textContent=t}
+function log(t){G.log.push(t);if(G.log.length>2)G.log.shift();$('log').innerHTML=G.log.map(x=>`<div>${esc(x)}</div>`).join('')}
+function popup(team,text){const e=$('pop');if(e)e.innerHTML=`<span class="pop p${team}">${esc(text)}</span>`}
+
+/* ---------- rendering ---------- */
+const bidText=s=>{const b=G.bids[s];return b===null?'':b===0?(G.blind[s]?'Blind nil':'Nil'):'Bid '+b};
+function teamLine(t){
+  if(G.stage!=='play')return '';
+  const parts=[],seats=[t,t+2];
+  const reg=seats.filter(s=>G.bids[s]>0),nil=seats.filter(s=>G.bids[s]===0);
+  if(reg.length)parts.push(`Bid ${reg.reduce((a,s)=>a+G.bids[s],0)} · took ${reg.reduce((a,s)=>a+G.tricks[s],0)}`);
+  for(const s of nil)parts.push(`${who(s)}: ${G.blind[s]?'blind nil':'nil'}${G.tricks[s]?' ✗':''}`);
+  return parts.join(' · ');
+}
+function renderScore(){
+  const col=t=>`<div class="tm t${t}"><span class="n">${t?'THEM':'US'}</span><span class="big">${G.scores[t]}</span><small>bags ${G.bags[t]}</small><small>${teamLine(t)}</small></div>`;
+  $('score').innerHTML=col(0)+col(1);
+}
+const minis=n=>Array.from({length:n},()=>'<span class="mini"></span>').join('');
+function seatInner(s){
+  const n=G.hands[s].length;
+  const info=[bidText(s),G.stage==='play'?`took ${G.tricks[s]}`:''].filter(Boolean).join(' · ');
+  return `<div class="nm">${who(s)}${G.dealer===s?'<span class="badge">D</span>':''}</div><div class="bd">${info||'&nbsp;'}</div>`
+    +(s===2?`<div class="fanrow">${minis(n)}</div>`:`<div class="fancol">${n?'<span class="mini"></span>':''}<span>×${n}</span></div>`);
+}
+function renderSeats(){
+  for(const[s,id]of[[1,'seatW'],[2,'seatN'],[3,'seatE']]){
+    const e=$(id);e.className='seat'+(G.turn===s?' turn':'');e.innerHTML=seatInner(s);
+  }
+  const me=$('seatS');
+  me.className='seat'+(G.turn===0?' turn':'');
+  const info=[bidText(0),G.stage==='play'?`took ${G.tricks[0]}`:''].filter(Boolean).join(' · ');
+  me.innerHTML=`<span class="nm">You${G.dealer===0?'<span class="badge">D</span>':''}</span>${info?` <span class="bd">· ${info}</span>`:''}`;
+}
+const POS=['s','w','n','e'];
+function renderTrick(){
+  $('trick').innerHTML=G.trick.map(t=>`<div class="tc ${POS[t.seat]}${G.winSeat===t.seat?' win':''}">${cardEl(t.card)}</div>`).join('')
+    +`<div class="brk">${G.stage==='play'?(G.broken?'♠ spades broken':'♠ not broken yet'):''}</div>`;
+}
+function renderHand(){
+  const el=$('mine'),h=G.hands[0],n=h.length;
+  const cw=el.clientWidth||340;
+  const W=Math.max(40,Math.min(62,Math.round(cw*0.14)));
+  const step=n>1?Math.min(W*0.78,(cw-W)/(n-1)):0;
+  const sty=i=>`width:${W}px;${i?`margin-left:${Math.round(step-W)}px`:''}`;
+  if(!G.reveal&&G.stage==='bid'){
+    el.innerHTML=h.map((c,i)=>`<div class="card back" style="${sty(i)}"></div>`).join('');
+    return;
+  }
+  const myTurn=G.stage==='play'&&G.turn===0&&G.trick.length<4;
+  const legal=myTurn?legalPlays(h,G.trick,G.broken):null;
+  el.innerHTML=h.map((c,i)=>{
+    const cls=[];
+    if(legal)cls.push(legal.includes(c)?'ok':'dim');
+    if(G.selCard===c)cls.push('sel');
+    if(G.hint===c)cls.push('hint');
+    return cardEl(c,cls.join(' '),i,sty(i));
+  }).join('');
+}
+function render(){
+  $('lvl').textContent=`NPCs: ${cap(G.level)} · to ${G.target}`;
+  renderScore();renderSeats();renderTrick();renderHand();
+  const b=$('btn'),b2=$('btn2');
+  const myPlay=G.stage==='play'&&G.turn===0&&G.trick.length<4&&!!G.onCard;
+  if(myPlay&&G.selCard){b.className='';b.textContent=`Play ${fmt(G.selCard)}`;b.disabled=false}
+  else b.className='hide';
+  b2.className=myPlay?'alt':'alt hide';
+}
+$('mine').addEventListener('click',e=>{
+  const el=e.target.closest('.card');if(!el||!G||!G.onCard||el.dataset.i===undefined)return;
+  G.onCard(+el.dataset.i);
+});
+$('btn').addEventListener('click',()=>{if(G&&G.onBtn)G.onBtn()});
+$('btn2').addEventListener('click',()=>{if(G)showHint()});
+window.addEventListener('resize',()=>{if(G&&G.hands)renderHand()});
+
+/* ---------- hints ---------- */
+function viewFor(s){
+  const pm=maskOf([...G.played,...G.trick.map(t=>t.card)]);
+  return{seat:s,hand:G.hands[s],trick:G.trick,lead:G.lead,broken:G.broken,bids:G.bids,blind:G.blind,tricks:G.tricks,pm,
+    voids:G.voids,done:G.played.length/4,scores:G.scores,bags:G.bags};
+}
+function showHint(){
+  if(!G||G.turn!==0)return;
+  if(G.stage==='bid'&&G.onBid){
+    const r=chooseBid(G.hands[0],{level:'hard',seat:0,dealer:G.dealer,bids:G.bids.slice(),blind:G.blind.slice(),bags:G.bags,samples:60});
+    G.onBid(r.bid);
+    status('Hint: '+explainBid(G.hands[0],r));
+  }else if(G.stage==='play'&&G.onCard){
+    const v=viewFor(0),legal=legalPlays(v.hand,v.trick,v.broken);
+    const rk=rankPlays(v,{det:true});
+    const c=rk?rk[0].c:legal[0];
+    G.hint=c;
+    status(`Hint: play the ${fmt(c)} — ${explainPlay(v,rk)}`);
+    render();
+  }
+}
+
+/* ---------- player input ---------- */
+const ledName=s=>['spades','hearts','diamonds','clubs'][s];
+function humanPlay(){
+  return new Promise(res=>{
+    G.selCard=null;
+    const legal=legalPlays(G.hands[0],G.trick,G.broken);
+    const play=c=>{G.onCard=G.onBtn=null;G.selCard=null;G.hint=null;res(c)};
+    G.onCard=i=>{
+      const c=G.hands[0][i];if(!c)return;
+      if(!legal.includes(c)){
+        status(G.trick.length?`You must follow suit: play ${ledName(G.trick[0].card.s)}.`:'Spades are not broken yet — lead another suit.');
+        return;
+      }
+      G.hint=null;
+      if(G.selCard===c){play(c);return}
+      G.selCard=c;status(`Tap ${fmt(c)} again, or press Play`);render();
+    };
+    G.onBtn=()=>{if(G.selCard)play(G.selCard)};
+    render();
+  });
+}
+function humanBid(){
+  return new Promise(res=>{
+    let n=3;
+    const bar=$('bidbar');
+    const draw=()=>{
+      bar.className='on';
+      bar.innerHTML=`<button class="hintb" data-a="hint">Hint</button><button data-a="nil">Nil</button><button data-d="-1">−</button><b>${n===0?'Nil':n}</b><button data-d="1">+</button><button class="go" data-a="go">Bid</button>`;
+      bar.querySelectorAll('button').forEach(b=>b.onclick=()=>{
+        const a=b.dataset.a;
+        if(a==='hint'){showHint();return}
+        if(a==='nil'){n=0;draw();return}
+        if(a==='go'){bar.className='';bar.innerHTML='';G.onBid=null;res(n);return}
+        n=Math.max(0,Math.min(13,n+ +b.dataset.d));draw();
+      });
+    };
+    G.onBid=v=>{n=v;draw()};
+    draw();
+  });
+}
+// Blind nil: bid 200 either way without looking at your cards. Offered when you are 100 or more behind.
+function askBlind(){
+  return new Promise(res=>{
+    $('panel').innerHTML=`<h2>Blind nil?</h2>
+      <p>You are ${G.scores[1]-G.scores[0]} points behind. You may bid <b>Blind Nil</b> without looking at your cards: +200 if you take no tricks, −200 if you do.</p>
+      <button class="gold" id="bLook">Look at my cards</button>
+      <button class="opt" id="bBlind">Bid Blind Nil</button>`;
+    $('ov').classList.add('on');
+    $('bLook').onclick=()=>{$('ov').classList.remove('on');res(false)};
+    $('bBlind').onclick=()=>{$('ov').classList.remove('on');res(true)};
+  });
+}
+function showRound(res){
+  return new Promise(done=>{
+    const col=t=>{
+      const x=res[t];
+      const items=x.items.length?x.items.map(i=>`<li><span>${i.seat!==undefined?who(i.seat)+': ':''}${i.t}</span><b>${i.p>0?'+':''}${i.p}</b></li>`).join(''):'<li><span>Nothing to score</span><b>0</b></li>';
+      return `<div><h3>${t?'Them':'Us'}</h3><ul>${items}</ul><div class="tot">${x.pts>0?'+':''}${x.pts}</div><div class="sub">Score ${G.scores[t]} · bags ${G.bags[t]}</div></div>`;
+    };
+    $('panel').innerHTML=`<h2>Hand result</h2><div class="rgrid">${col(0)}${col(1)}</div><button class="gold" id="cont">Continue</button>`;
+    $('ov').classList.add('on');
+    $('cont').onclick=()=>{$('ov').classList.remove('on');done()};
+  });
+}
+
+/* ---------- NPC decisions ---------- */
+function npcBid(s){
+  const mine=s%2,deficit=G.scores[1-mine]-G.scores[mine],pb=G.bids[(s+2)%4];
+  const o={level:G.level,seat:s,dealer:G.dealer,bids:G.bids.slice(),blind:G.blind.slice(),bags:G.bags,
+    blindOk:G.blindOpt&&deficit>=100,deficit,partnerBid:pb===null?undefined:pb};
+  if(wantsBlindNil(o))return{bid:0,blind:true};
+  return{bid:chooseBid(G.hands[s],o).bid,blind:false};
+}
+function npcPlay(s){
+  const legal=legalPlays(G.hands[s],G.trick,G.broken);
+  if(legal.length===1)return legal[0];
+  if(G.level==='easy'&&Math.random()<0.55)return legal[Math.floor(Math.random()*legal.length)];
+  const v=viewFor(s);
+  if(G.level==='hard'){const rk=rankPlays(v);if(rk)return rk[0].c}
+  return greedyPlay(v);
+}
+function playCard(s,c){
+  const h=G.hands[s];h.splice(h.indexOf(c),1);
+  if(G.trick.length&&c.s!==G.trick[0].card.s)G.voids[s][G.trick[0].card.s]=1;
+  G.trick.push({seat:s,card:c});
+  if(c.s===0)G.broken=true;
+}
+
+/* ---------- game flow ---------- */
+async function bidding(A){
+  const order=[1,2,3,4].map(i=>(G.dealer+i)%4);
+  for(const s of order){
+    if(G.bids[s]!==null)continue;
+    G.turn=s;
+    if(s===0){
+      if(!G.reveal){
+        status('Your bid — you have not looked at your cards');render();
+        const blind=await A(askBlind());
+        if(blind){G.bids[0]=0;G.blind[0]=true}
+        G.reveal=true;
+      }
+      if(G.bids[0]===null){status('Your bid');render();G.bids[0]=await A(humanBid())}
+    }else{
+      status(`${who(s)} ${s===2?'is':'is'} bidding…`);render();await A(pause(800));
+      const r=npcBid(s);
+      G.bids[s]=r.bid;if(r.blind)G.blind[s]=true;
+    }
+    sfx('play');log(`${who(s)} bid ${bidText(s).replace(/^Bid /,'')}`);
+    G.turn=null;render();saveGame();
+  }
+  G.turn=null;
+}
+async function playing(A){
+  while(true){
+    if(G.trick.length===4){
+      const w=trickWinner(G.trick);
+      G.winSeat=w;G.turn=null;
+      status(`${who(w)} ${w?'takes':'take'} the trick`);render();
+      popup(w%2,`${who(w)} ${w?'wins':'win'} it`);
+      if(w%2===0){sfx('trick',1);if(w===0)buzz(40)}else sfx('trick',0);
+      await A(pause(1100));
+      G.tricks[w]++;G.played.push(...G.trick.map(t=>t.card));G.trick=[];G.lead=w;G.winSeat=null;
+      log(`${who(w)} won trick ${G.played.length/4}`);
+      saveGame();render();
+    }
+    if(G.hands.every(h=>!h.length)&&!G.trick.length)break;
+    const s=(G.lead+G.trick.length)%4;
+    G.turn=s;
+    let c;
+    if(s===0){status(G.trick.length?'Your play':'You lead');render();c=await A(humanPlay())}
+    else{status(`${who(s)} ${s===2?'is':'is'} thinking…`);render();await A(pause(650));c=npcPlay(s)}
+    playCard(s,c);sfx('play');render();saveGame();
+  }
+  G.turn=null;
+}
+async function scoreRound(A){
+  const res=[0,1].map(t=>scoreTeam(t,G.bids,G.blind,G.tricks,G.bags[t]));
+  recordRound(stats,{bid:G.bids[0],blind:G.blind[0],took:G.tricks[0],res});saveStats();
+  for(const t of[0,1]){G.scores[t]+=res[t].pts;G.bags[t]=res[t].bags}
+  G.stage='next';G.dealer=(G.dealer+1)%4;
+  const w=gameWinner(G.scores,G.target);
+  sfx('round',res[0].pts-res[1].pts);buzz(res[0].pts>0?60:30);
+  status('Hand over');render();
+  await A(showRound(res));
+  if(w!==null)throw{win:w};
+}
+async function round(A,resume){
+  if(!resume||G.stage==='next'){
+    const d=shuffle(newDeck());
+    G.hands=[0,1,2,3].map(s=>d.slice(s*13,s*13+13).sort(cmpHand));
+    G.bids=[null,null,null,null];G.blind=[false,false,false,false];G.tricks=[0,0,0,0];
+    G.trick=[];G.played=[];G.broken=false;G.voids=[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]];
+    G.lead=(G.dealer+1)%4;G.stage='bid';
+    G.reveal=!(G.blindOpt&&G.scores[1]-G.scores[0]>=100);
+    G.selCard=null;G.hint=null;G.winSeat=null;
+    log(`${G.dealer?who(G.dealer):'You'} deal${G.dealer?'s':''}`);
+  }
+  G.selCard=null;G.hint=null;
+  if(G.stage==='bid'){
+    status(`${who(G.dealer)} ${G.dealer?'deals':'deal'} — bidding starts with ${who((G.dealer+1)%4)}`);render();saveGame();
+    await A(pause(500));
+    await bidding(A);
+    G.stage='play';G.lead=(G.dealer+1)%4;G.trick=[];saveGame();
+  }
+  if(G.stage==='play'){
+    await playing(A);
+    await scoreRound(A);
+  }
+}
+function gameOver(w){
+  recordGame(stats,{won:w===0,level:G.level,margin:G.scores[0]-G.scores[1]});saveStats();
+  clearSave();G.over=true;G.onCard=G.onBtn=G.onBid=null;
+  render();
+  sfx(w===0?'win':'lose');buzz(w===0?220:90);
+  $('panel').innerHTML=`<h2>${w===0?'You and your partner win! 🎉':'The NPCs win'}</h2>
+    <p>Final score: Us ${G.scores[0]} – Them ${G.scores[1]}</p>
+    <p style="opacity:.8">Record: ${stats.w} wins, ${stats.l} losses</p>
+    <button class="gold" id="again">Play again</button>
+    <button class="opt" id="goStats">View stats</button>`;
+  $('ov').classList.add('on');
+  $('again').onclick=()=>{$('ov').classList.remove('on');newGame()};
+  $('goStats').onclick=()=>openStats();
+}
+async function newGame(saved){
+  const gen=++GEN;
+  leaveOpen=false;
+  $('ov').classList.remove('on');$('ov2').classList.remove('on');
+  $('bidbar').className='';$('bidbar').innerHTML='';
+  // Every await goes through A so a game that was abandoned stops quietly.
+  const A=async p=>{const v=await p;if(gen!==GEN)throw{abort:true};return v};
+  const fresh={scores:[0,0],bags:[0,0],dealer:Math.floor(Math.random()*4),log:[],hands:[[],[],[],[]],bids:[null,null,null,null],
+    blind:[false,false,false,false],tricks:[0,0,0,0],trick:[],lead:0,broken:false,played:[],
+    voids:[[0,0,0,0],[0,0,0,0],[0,0,0,0],[0,0,0,0]],stage:'next',reveal:true,
+    level:settings.level,target:settings.target,blindOpt:settings.blindNil};
+  G={...fresh,...(saved||{}),selCard:null,hint:null,turn:null,winSeat:null,over:false,onCard:null,onBtn:null,onBid:null};
+  if(!saved)clearSave();
+  $('log').innerHTML=G.log.map(x=>`<div>${esc(x)}</div>`).join('');
+  let resume=!!saved;
+  try{
+    while(true){await round(A,resume);resume=false}
+  }catch(e){
+    if(e&&e.abort)return;
+    if(e&&e.win!==undefined)gameOver(e.win);
+    else{console.error(e);throw e}
+  }
+}
+// Start screen: shown on launch and from the in-game menu. Continue is offered when a game is saved.
+function showHome(){
+  const saved=loadSave();
+  const sub=saved?`Us ${saved.scores[0]} – Them ${saved.scores[1]} · ${cap(saved.level)} · to ${saved.target}`:'';
+  $('panel').innerHTML=`<div class="home"><div class="logo">♠ ♥︎ ♣ ♦︎</div><h1>Spades</h1><div class="tag">You and your partner against two NPCs</div></div>
+    ${saved?`<button class="gold" id="hCont">Continue<small>${sub}</small></button>`:''}
+    <button class="${saved?'opt':'gold'}" id="hNew">New game</button>
+    <button class="opt" id="hSet">Settings</button>
+    <button class="opt" id="hStats">Stats</button>`;
+  $('ov').classList.add('on');
+  if(saved)$('hCont').onclick=()=>newGame(saved);
+  let armed=false;
+  $('hNew').onclick=()=>{
+    if(saved&&!armed){armed=true;$('hNew').classList.add('warn');$('hNew').textContent='Tap again — the saved game will be lost';return}
+    newGame();
+  };
+  $('hSet').onclick=openMenu;
+  $('hStats').onclick=()=>openStats('home');
+}
+// Back to the start screen from a game in progress (the game is saved first).
+function goHome(){
+  saveGame();GEN++;leaveOpen=false;
+  G=null;
+  $('ov2').classList.remove('on');
+  $('lvl').textContent='';$('score').innerHTML='';$('trick').innerHTML='';$('mine').innerHTML='';$('pop').innerHTML='';
+  for(const id of['seatN','seatW','seatE','seatS']){$(id).innerHTML='';$(id).className='seat'}
+  status('');$('log').innerHTML='';
+  $('bidbar').className='';$('bidbar').innerHTML='';
+  $('btn').className='hide';$('btn2').className='alt hide';
+  showHome();
+}
+function start(){applySettings();showHome()}
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveGame()});
+
+/* ---------- menu + stats + back button ---------- */
+function closeMenu(){$('ov2').classList.remove('on');leaveOpen=false}
+function openMenu(){
+  leaveOpen=false;
+  const lv=['easy','normal','hard'];
+  const pending=!!G&&(G.level!==settings.level||G.target!==settings.target);
+  const chk=(id,on,label)=>`<label class="chk"><input type="checkbox" id="${id}" ${on?'checked':''}> ${label}</label>`;
+  $('panel2').innerHTML=`<h2>Menu</h2>
+    <div class="sect">Game</div>
+    <div class="lbl">NPC difficulty${pending?' <small>(applies to the next game)</small>':''}</div>
+    <div class="seg">${lv.map(l=>`<button data-lv="${l}" class="${settings.level===l?'on':''}">${cap(l)}</button>`).join('')}</div>
+    <div class="lbl">Game length</div>
+    <div class="seg"><button data-tg="500" class="${settings.target===500?'on':''}">To 500</button><button data-tg="250" class="${settings.target===250?'on':''}">Short (250)</button></div>
+    ${chk('blindChk',settings.blindNil,'Blind nil: when you are 100 or more behind you may bid nil without looking (±200)')}
+    <div class="sect">Display</div>
+    ${chk('fourChk',settings.fourColor,'Four-colour deck (clubs green, diamonds blue)')}
+    ${chk('largeChk',settings.large,'Larger card text')}
+    <div class="sect">Sound and feel</div>
+    ${chk('soundChk',settings.sound,'Sounds')}
+    ${chk('hapChk',settings.haptics,'Vibration')}
+    ${chk('fastChk',settings.fast,'Skip animations (faster NPCs)')}
+    ${bridge()?chk('awakeChk',settings.keepAwake,'Keep the screen on while playing'):''}
+    <button class="opt" id="mStats">Stats</button>
+    ${G?'<button class="opt" id="mHome">Main screen (game is saved)</button><button class="opt" id="mNew">New game</button>':''}
+    <button class="gold" id="mClose">Close</button>`;
+  $('ov2').classList.add('on');
+  const P=$('panel2');
+  P.querySelectorAll('[data-lv]').forEach(b=>b.onclick=()=>{settings.level=b.dataset.lv;saveSettings();openMenu()});
+  P.querySelectorAll('[data-tg]').forEach(b=>b.onclick=()=>{settings.target=+b.dataset.tg;saveSettings();openMenu()});
+  const bind=(id,k,after)=>{const e=$(id);if(e)e.onchange=ev=>{settings[k]=ev.target.checked;saveSettings();applySettings();if(after)after()}};
+  bind('blindChk','blindNil',()=>{if(G)G.blindOpt=settings.blindNil});
+  bind('fourChk','fourColor');bind('largeChk','large',()=>{if(G&&G.hands)render()});
+  bind('soundChk','sound');bind('hapChk','haptics');bind('fastChk','fast');bind('awakeChk','keepAwake');
+  $('mStats').onclick=()=>openStats();
+  $('mClose').onclick=closeMenu;
+  if(G)$('mHome').onclick=goHome;
+  let armed=false;
+  if(G)$('mNew').onclick=()=>{
+    if(G.over||armed){closeMenu();newGame()}
+    else{armed=true;$('mNew').classList.add('warn');$('mNew').textContent='Tap again — this game won’t be counted'}
+  };
+}
+function openStats(from){
+  leaveOpen=false;
+  const s=stats,pct=(a,b)=>b?` (${Math.round(100*a/b)}%)`:'';
+  const row=(a,b)=>`<li><span>${a}</span><b>${b}</b></li>`;
+  const diff=['easy','normal','hard'].map(l=>row(cap(l),`${s.byDiff[l].w} – ${s.byDiff[l].l}`)).join('');
+  $('panel2').innerHTML=`<h2>Stats</h2>
+    <ul>
+      ${row('Games played',s.games)}
+      ${row('Won – lost',`${s.w} – ${s.l}${pct(s.w,s.games)}`)}
+      ${row('Current win streak',s.streak)}
+      ${row('Best win streak',s.bestStreak)}
+      ${row('Biggest winning margin',s.bestMargin)}
+      ${row('Hands played',s.rounds)}
+      ${row('Your bids made',`${s.bidsMade} of ${s.bidsN}${pct(s.bidsMade,s.bidsN)}`)}
+      ${row('Your nils made',`${s.nilMade} of ${s.nilN}${pct(s.nilMade,s.nilN)}`)}
+      ${row('Your blind nils made',`${s.blindMade} of ${s.blindN}`)}
+      ${row('Times you set them',s.setsFor)}
+      ${row('Times you were set',s.setsAgainst)}
+      ${row('Bags your team took',s.bags)}
+    </ul>
+    <div class="lbl">Won – lost by difficulty</div>
+    <ul>${diff}</ul>
+    <button class="gold" id="sBack">Back</button>
+    <button class="opt" id="sReset">Reset stats</button>`;
+  $('ov2').classList.add('on');
+  $('sBack').onclick=from==='home'?closeMenu:openMenu;
+  let armed=false;
+  $('sReset').onclick=()=>{
+    if(armed){stats=emptyStats();saveStats();openStats(from)}
+    else{armed=true;$('sReset').classList.add('warn');$('sReset').textContent='Tap again to erase all stats'}
+  };
+}
+$('menuBtn').addEventListener('click',openMenu);
+// Android back button. The app calls this; it returns 'handled' or 'exit'. Leaving mid-game is safe: the game is saved.
+function askLeave(){
+  leaveOpen=true;
+  $('panel2').innerHTML=`<h2>Leave the game?</h2>
+    <p>Your game is saved. You can pick it up where you left off next time.</p>
+    <button class="gold" id="keep">Keep playing</button>
+    <button class="opt" id="leave">Exit</button>`;
+  $('ov2').classList.add('on');
+  $('keep').onclick=closeMenu;
+  $('leave').onclick=()=>{const b=bridge();if(b&&b.exitApp)b.exitApp()};
+}
+window.spadesBack=function(){
+  if(leaveOpen)return 'exit';
+  if($('ov2').classList.contains('on')){closeMenu();return 'handled'}
+  if(!G||G.over)return 'exit';
+  askLeave();return 'handled';
+};
+
+/* ---------- updates ---------- */
+// Do not edit by hand: scripts/release.sh sets APP_VERSION and version.json together.
+const APP_VERSION='1.0.0';
+const VERSION_URL='https://raw.githubusercontent.com/Orangitaz/OrangitazSpades/main/version.json';
+const RELEASES_URL='https://github.com/Orangitaz/OrangitazSpades/releases/latest';
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function renderVer(extra){
+  const dflt=typeof isWeb!=='undefined'&&isWeb?'':' · <a id="chk">Check for updates</a>';
+  $('ver').innerHTML=`v${APP_VERSION}${extra?' · '+extra:dflt}`;
+  const c=$('chk');if(c)c.onclick=()=>checkUpdate(true);
+}
+const API_URL='https://api.github.com/repos/Orangitaz/OrangitazSpades/releases/latest';
+const APK_URL='https://github.com/Orangitaz/OrangitazSpades/releases/latest/download/OrangitazSpades.apk';
+async function getJSON(url){
+  const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),8000);
+  try{
+    const res=await fetch(url,{cache:'no-store',signal:ctl.signal});
+    if(!res.ok)throw new Error('HTTP '+res.status);
+    return await res.json();
+  }finally{clearTimeout(to)}
+}
+// The update only counts once its release (with the APK) is published, so "Download" always gets the file.
+async function checkUpdate(manual){
+  if(manual)renderVer('Checking…');
+  try{
+    let latest=null,notes='',apk=APK_URL;
+    try{
+      const rel=await getJSON(API_URL);
+      latest=String(rel.tag_name||'').replace(/^v/,'');
+      notes=String(rel.body||'').trim();
+      const a=(rel.assets||[]).find(x=>/\.apk$/i.test(x.name||'')&&/^https:\/\/github\.com\//.test(x.browser_download_url||''));
+      if(a)apk=a.browser_download_url;
+    }catch(e){
+      // fall back to version.json (then the link goes to the releases page)
+      const info=await getJSON(VERSION_URL+'?t='+Date.now());
+      latest=info.version;notes=info.notes||'';apk=/^https:\/\/github\.com\//.test(info.url||'')?info.url:RELEASES_URL;
+    }
+    try{localStorage.setItem('spades-lastcheck',String(Date.now()))}catch(e){}
+    if(/^\d+\.\d+\.\d+$/.test(latest)&&cmpVer(latest,APP_VERSION)>0){
+      renderVer(`<b>Update v${esc(latest)} available</b> — <a href="${esc(apk)}" target="_blank" rel="noopener">Download</a>${notes?`<br>${esc(notes.slice(0,200))}`:''}`);
+    }else if(manual)renderVer(`Up to date · <a id="chk">Check again</a>`);
+    else renderVer();
+  }catch(e){
+    if(manual)renderVer(`Couldn't check for updates · <a id="chk">Try again</a>`);
+    else renderVer();
+  }
+}
+// The web version (GitHub Pages) updates itself through its service worker, so there is no APK to offer.
+const isWeb=typeof location!=='undefined'&&/^https?:$/.test(location.protocol)&&!bridge();
+if(isWeb&&typeof navigator!=='undefined'&&navigator.serviceWorker)navigator.serviceWorker.register('sw.js').catch(()=>{});
+renderVer();
+(function autoCheck(){
+  if(isWeb)return;
+  let last=0;try{last=+localStorage.getItem('spades-lastcheck')||0}catch(e){}
+  if(Date.now()-last>24*3600*1000)checkUpdate(false);
+})();
+
+start();
+</script>
+</body>
+</html>
