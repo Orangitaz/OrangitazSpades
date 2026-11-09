@@ -135,8 +135,8 @@ test('bid estimate: strong hand is worth far more than a weak one', () => {
   const weak = [C(2, 0), C(3, 0), C(4, 1), C(5, 1), C(6, 1), C(7, 2), C(8, 2), C(9, 2), C(10, 3), C(3, 3), C(4, 3), C(5, 3), C(6, 3)];
   assert.ok(L.bidEstimate(strong).est > 6);
   assert.ok(L.bidEstimate(weak).est < 1.5);
-  assert.equal(L.chooseBid(weak, { level: 'normal' }).bid, 0);        // weak hand goes nil
-  assert.ok(L.chooseBid(strong, { level: 'normal' }).bid >= 6);
+  assert.equal(L.chooseBid(weak, { level: 'normal', exact: true }).bid, 0);        // weak hand goes nil
+  assert.ok(L.chooseBid(strong, { level: 'normal', exact: true }).bid >= 6);
 });
 test('bids are always 0..13 at every level', () => {
   for (const level of ['easy', 'normal', 'hard']) {
@@ -304,4 +304,22 @@ test('unpackGame rejects damaged saves', async () => {
   assert.equal(bad(c => { c.v = 2; }), null);
   assert.equal(L.unpackGame(null), null);
   assert.equal(L.unpackGame('x'), null);
+});
+
+/* ---------- difficulty table ---------- */
+test('levels get steadily stronger: less randomness, less bid noise, hard looks ahead', () => {
+  const { easy, normal, hard } = L.LEVELS;
+  assert.ok(easy.rand > normal.rand && normal.rand >= hard.rand * 0.5);
+  assert.ok(easy.noise > normal.noise);
+  assert.equal(hard.base, 'hard');
+  assert.equal(easy.base, 'normal');
+});
+test('bid noise stays within the level and never touches nil', () => {
+  const weak = [C(2, 0), C(3, 0), C(4, 1), C(5, 1), C(6, 1), C(7, 2), C(8, 2), C(9, 2), C(10, 3), C(3, 3), C(4, 3), C(5, 3), C(6, 3)];
+  const strong = [C(14, 0), C(13, 0), C(12, 0), C(11, 0), C(9, 0), C(14, 1), C(13, 1), C(14, 2), C(5, 2), C(14, 3), C(4, 3), C(3, 3), C(2, 3)];
+  const exact = L.chooseBid(strong, { level: 'easy', exact: true }).bid;
+  for (let k = 0; k < 200; k++) {
+    assert.ok(Math.abs(L.chooseBid(strong, { level: 'easy' }).bid - exact) <= 1);
+    assert.equal(L.chooseBid(weak, { level: 'easy' }).bid, 0);
+  }
 });

@@ -369,7 +369,7 @@ function bidByRollout(hand,o){
     const hs=[[],[],[],[]];hs[seat]=hand;
     let p=0;for(let s=0;s<4;s++){if(s===seat)continue;hs[s]=unseen.slice(p,p+13);p+=13}
     const others=[0,0,0,0];
-    for(let s=0;s<4;s++)if(s!==seat&&(!o.bids||o.bids[s]===null||o.bids[s]===undefined))others[s]=chooseBid(hs[s],{level:'normal'}).bid;
+    for(let s=0;s<4;s++)if(s!==seat&&(!o.bids||o.bids[s]===null||o.bids[s]===undefined))others[s]=chooseBid(hs[s],{level:'normal',exact:true}).bid;
     for(let ci=0;ci<cands.length;ci++){
       const bids=[0,0,0,0];
       for(let s=0;s<4;s++)bids[s]=s===seat?cands[ci]:(o.bids&&o.bids[s]!==null&&o.bids[s]!==undefined?o.bids[s]:others[s]);
@@ -382,18 +382,24 @@ function bidByRollout(hand,o){
   const ranked=cands.map((b,i)=>({bid:b,v:tot[i]/N})).sort((a,b)=>b.v-a.v);
   return{bid:ranked[0].bid,est:e.est,danger:d,ranked};
 }
-// o: {level, seat, dealer, bids, blind, bags}. Returns {bid, est, danger}; bid 0 = nil.
+// How each level plays. base: the policy it follows ('hard' looks ahead over random deals, 'normal' uses rules of thumb);
+// rand: chance of throwing a random legal card instead; noise: how far its bids can stray from the policy's bid.
+// Tuned (tests/calibrate.js) so the NPC team beats a reference average player about 30% / 60% / 90% of the time.
+const LEVELS={
+  easy:{base:'normal',rand:0.45,noise:1.2},
+  normal:{base:'normal',rand:0.09,noise:0.75},
+  hard:{base:'hard',rand:0.13,noise:0.65}
+};
+// o: {level, seat, dealer, bids, blind, bags, exact}. Returns {bid, est, danger}; bid 0 = nil. exact skips the level's bid noise.
 function chooseBid(hand,o){
-  const level=o.level||'normal',e=bidEstimate(hand),d=nilDanger(hand);
+  const cfg=LEVELS[o.level||'normal']||LEVELS.normal,e=bidEstimate(hand),d=nilDanger(hand);
   const base=Math.max(1,Math.min(13,Math.round(e.est)));
-  const res=b=>({bid:b,est:e.est,danger:d});
-  if(level==='easy'){
-    if(d<=0.3&&e.est<1.2&&Math.random()<0.6)return res(0);
-    return res(Math.max(1,Math.min(13,Math.round(e.est+(Math.random()-0.5)*2.4))));
-  }
-  if(level==='hard'&&o.seat!==undefined)return bidByRollout(hand,o);
-  if(d<=0.9&&e.est<=1.8)return res(0);
-  return res(base);
+  let r;
+  if(cfg.base==='hard'&&o.seat!==undefined)r=bidByRollout(hand,o);
+  else if(d<=0.9&&e.est<=1.8)r={bid:0,est:e.est,danger:d};
+  else r={bid:base,est:e.est,danger:d};
+  if(!o.exact&&cfg.noise&&r.bid>0)r.bid=Math.max(1,Math.min(13,r.bid+Math.round((Math.random()-0.5)*2*cfg.noise)));
+  return r;
 }
 // Hard NPCs sometimes gamble on a blind nil when their side is far behind.
 function wantsBlindNil(o){
@@ -757,7 +763,7 @@ function viewFor(s){
 function showHint(){
   if(!G||G.turn!==0)return;
   if(G.stage==='bid'&&G.onBid){
-    const r=chooseBid(G.hands[0],{level:'hard',seat:0,dealer:G.dealer,bids:G.bids.slice(),blind:G.blind.slice(),bags:G.bags,samples:60});
+    const r=chooseBid(G.hands[0],{level:'hard',exact:true,seat:0,dealer:G.dealer,bids:G.bids.slice(),blind:G.blind.slice(),bags:G.bags,samples:60});
     G.onBid(r.bid);
     status('Hint: '+explainBid(G.hands[0],r));
   }else if(G.stage==='play'&&G.onCard){
@@ -846,9 +852,10 @@ function npcBid(s){
 function npcPlay(s){
   const legal=legalPlays(G.hands[s],G.trick,G.broken);
   if(legal.length===1)return legal[0];
-  if(G.level==='easy'&&Math.random()<0.55)return legal[Math.floor(Math.random()*legal.length)];
+  const cfg=LEVELS[G.level]||LEVELS.normal;
+  if(Math.random()<cfg.rand)return legal[Math.floor(Math.random()*legal.length)];
   const v=viewFor(s);
-  if(G.level==='hard'){const rk=rankPlays(v);if(rk)return rk[0].c}
+  if(cfg.base==='hard'){const rk=rankPlays(v);if(rk)return rk[0].c}
   return greedyPlay(v);
 }
 function playCard(s,c){

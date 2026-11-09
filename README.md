@@ -36,11 +36,11 @@ Open `spades.html` in any browser. It is a single self-contained file with no de
 
 | Level | Bidding | Playing |
 |---|---|---|
-| Easy | Rough hand estimate with a lot of random noise | Plays at random about half the time, otherwise the rule-of-thumb play |
-| Normal | Counts spade honours, long spades, side-suit aces and kings and ruffing; bids nil on very weak hands | Rule of thumb: covers a partner's nil, ducks tricks once the contract is made to avoid bags, tries to set an opponent's nil, leads sure winners |
-| Hard | Tries each sensible bid (and nil) on random deals of the unseen cards and keeps the best average score | Guesses the hidden hands from the cards played and who has shown a void, plays out the rest of the hand for every legal card, and picks the best average point difference; may gamble on a blind nil when far behind |
+| Easy | Same hand estimate as Normal, but bids can be off by 1 or 2 | Throws a random legal card 45% of the time, otherwise the rule-of-thumb play |
+| Normal | Counts spade honours, long spades, side-suit aces and kings and ruffing; bids nil on very weak hands; bids can be off by 1 | Rule of thumb: covers a partner's nil, ducks tricks once the contract is made to avoid bags, tries to set an opponent's nil, leads sure winners; a random card about 1 time in 10 |
+| Hard | Tries each sensible bid (and nil) on random deals of the unseen cards and keeps the best average score | Guesses the hidden hands from the cards played and who has shown a void, plays out the rest of the hand for every legal card, and picks the best average point difference; a random card about 1 time in 8; may gamble on a blind nil when far behind |
 
-Measured over simulated games to 500 (40 per matchup, so treat these as roughly plus or minus 8 points): Hard beat Easy 40 out of 40 and Hard beat Normal about 90% of the time. Spades has a lot of luck, so even a much better NPC team loses sometimes.
+The levels are tuned to a target: against a reference "average player" (rule-of-thumb play, a random card 1 time in 5, bids up to 1 off), the NPC team wins about **30% of games on Easy, 60% on Normal and 90% on Hard**. Measured over 400 simulated games to 500 per level: Easy about 29%, Normal about 62%, Hard about 91% (give or take 5 points). The table is `LEVELS` in `spades.html`; re-measure with `node tests/calibrate.js`. Spades has a lot of luck, so even a much better NPC team loses sometimes.
 
 ## iPhone and other browsers (web version)
 
@@ -98,7 +98,7 @@ node --test tests/spades.test.js
 
 Needs Node 18 or newer, nothing to install. It covers following suit and leading spades, trick winners, scoring (bids, bags, nil, blind nil, set, bag penalty), game end, the AI always playing legal cards, saved-game validation, stats, version comparison, and full simulated games at every difficulty. It also runs in GitHub Actions before every build.
 
-A slower, luck-dependent comparison of the levels is available with `STRENGTH=1 node --test tests/strength.test.js` (`GAMES=100` for more games per matchup).
+A slower, luck-dependent calibration of the three levels against the reference player is `node tests/calibrate.js` (`GAMES=400` for more games per level).
 
 ## Layout of the code
 

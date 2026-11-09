@@ -12,7 +12,7 @@ function loadLogic() {
   const code = script().split('// ==LOGIC==')[1].split('// ==END LOGIC==')[0];
   return new Function(code + `
     return {SUITS,RANKS,key,SORT,cmpHand,newDeck,shuffle,maskOf,legalPlays,beats,curWinner,trickWinner,scoreTeam,gameWinner,diffFor,
-            isMaster,greedyPlay,bidEstimate,nilDanger,finishRound,bidByRollout,chooseBid,wantsBlindNil,dealUnseen,rankPlays,
+            isMaster,greedyPlay,bidEstimate,nilDanger,finishRound,bidByRollout,chooseBid,LEVELS,wantsBlindNil,dealUnseen,rankPlays,
             explainBid,explainPlay,cmpVer,emptyStats,mergeStats,recordRound,recordGame,packGame,unpackGame};`)();
 }
 
