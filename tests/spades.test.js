@@ -323,3 +323,39 @@ test('bid noise stays within the level and never touches nil', () => {
     assert.equal(L.chooseBid(weak, { level: 'easy' }).bid, 0);
   }
 });
+
+/* ---------- closing the app on the hand-result panel ---------- */
+test('a scored hand is saved, and resuming deals the next hand without re-counting the old one', async () => {
+  const g = loadGame();
+  g.run(`settings.level='normal';settings.target=500;settings.fast=true;showRound=()=>new Promise(()=>{});`);
+  g.run('newGame()');
+  for (let i = 0; i < 200; i++) await new Promise(r => setImmediate(r));
+  assert.equal(g.run('G.stage'), 'next');
+  const rounds = JSON.parse(g.store.get('spades-stats')).rounds;
+  assert.equal(rounds, 1);
+  const saved = L.unpackGame(JSON.parse(g.store.get('spades-save')));
+  assert.ok(saved, 'a scored hand is a valid save');
+  assert.equal(saved.stage, 'next');
+  assert.equal(saved.played.length, 52);
+  assert.deepEqual([...saved.scores], [...g.run('G.scores')]);
+  const savedScores = [...saved.scores];
+  // resume in a fresh page: the old hand is not scored again; play goes on to the end of the game
+  const h = loadGame();
+  h.run(`settings.fast=true;settings.target=250;`);
+  h.store.set('spades-stats', g.store.get('spades-stats'));
+  h.run('stats=loadStats()');
+  h.ctx.__saved = Object.assign(saved, { target: 250 });
+  h.run('var __first=null;var __sr2=scoreRound;scoreRound=async function(A){if(__first===null)__first=G.scores.slice();return __sr2(A)}');
+  await h.run('newGame(__saved)');
+  assert.equal(h.run('G.over'), true);
+  assert.equal(h.run('stats.rounds') >= rounds + 1, true);
+  // the first hand scored after resuming started from the saved scores: the old hand was not added a second time
+  assert.deepEqual([...h.run('__first')], savedScores);
+});
+test('a finished game leaves no save behind', async () => {
+  const g = loadGame();
+  g.run(`settings.target=250;settings.fast=true;`);
+  await g.run('newGame()');
+  assert.equal(g.run('G.over'), true);
+  assert.equal(g.store.get('spades-save'), undefined);
+});

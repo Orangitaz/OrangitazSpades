@@ -34,7 +34,7 @@ button{font-family:inherit}
 .seat{text-align:center;font-size:12px;border-radius:10px;padding:3px 2px;min-width:0}
 .seat.turn{box-shadow:0 0 0 2px var(--gold);background:#0004}
 .seat .nm{font-weight:700;font-size:13px}
-.seat .bd{opacity:.9;font-size:11px;min-height:14px;line-height:1.2}
+.seat .bd{opacity:.9;font-size:11px;min-height:14px;line-height:1.2;white-space:nowrap}
 #seatN{grid-column:2;grid-row:1}
 #seatW{grid-column:1;grid-row:2;align-self:center}
 #seatE{grid-column:3;grid-row:2;align-self:center}
@@ -559,7 +559,7 @@ function unpackGame(o){
     if(!Array.isArray(o.bags)||o.bags.length!==2||!o.bags.every(n=>Number.isInteger(n)&&n>=0&&n<10))return null;
     if(!Number.isInteger(o.dealer)||o.dealer<0||o.dealer>3)return null;
     if(!['easy','normal','hard'].includes(o.level)||(o.target!==250&&o.target!==500))return null;
-    if(o.stage!=='bid'&&o.stage!=='play')return null;
+    if(o.stage!=='bid'&&o.stage!=='play'&&o.stage!=='next')return null;
     if(!four(o.bids)||!o.bids.every(b=>b===null||(Number.isInteger(b)&&b>=0&&b<=13)))return null;
     if(!four(o.blind)||!o.blind.every(b=>typeof b==='boolean'))return null;
     if(!four(o.tricks)||!o.tricks.every(n=>Number.isInteger(n)&&n>=0&&n<=13))return null;
@@ -630,7 +630,9 @@ function saveStats(){try{localStorage.setItem('spades-stats',JSON.stringify(stat
 
 /* saved game: checkpoints are written as play goes on, so a closed or killed app can pick up where it left off */
 function saveGame(){
-  if(!G||G.over||!(G.stage==='bid'||G.stage==='play'))return;
+  if(!G||G.over)return;
+  if(G.stage==='next'){if(G.played.length!==52||gameWinner(G.scores,G.target)!==null)return}   // a scored hand: resume deals the next one
+  else if(!(G.stage==='bid'||G.stage==='play'))return;
   try{localStorage.setItem('spades-save',JSON.stringify(packGame(G)))}catch(e){}
 }
 function clearSave(){try{localStorage.removeItem('spades-save')}catch(e){}}
@@ -699,7 +701,7 @@ function renderScore(){
 const minis=n=>Array.from({length:n},()=>'<span class="mini"></span>').join('');
 function seatInner(s){
   const n=G.hands[s].length;
-  const info=[bidText(s),G.stage==='play'?`took ${G.tricks[s]}`:''].filter(Boolean).join(' · ');
+  const info=[bidText(s),G.stage==='play'?`took ${G.tricks[s]}`:''].filter(Boolean).join(s===2?' · ':'<br>');
   return `<div class="nm">${who(s)}${G.dealer===s?'<span class="badge">D</span>':''}</div><div class="bd">${info||'&nbsp;'}</div>`
     +(s===2?`<div class="fanrow">${minis(n)}</div>`:`<div class="fancol">${n?'<span class="mini"></span>':''}<span>×${n}</span></div>`);
 }
@@ -918,6 +920,7 @@ async function scoreRound(A){
   for(const t of[0,1]){G.scores[t]+=res[t].pts;G.bags[t]=res[t].bags}
   G.stage='next';G.dealer=(G.dealer+1)%4;
   const w=gameWinner(G.scores,G.target);
+  if(w===null)saveGame();else clearSave();
   sfx('round',res[0].pts-res[1].pts);buzz(res[0].pts>0?60:30);
   status('Hand over');render();
   await A(showRound(res));
