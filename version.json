@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
-  "notes": "First release: partnership spades against three NPCs with bidding, nil and blind nil, bags, hints, difficulty levels, stats, save and resume",
+  "version": "1.0.1",
+  "notes": "Difficulty levels tuned so the NPCs win about 30% (Easy), 60% (Normal) and 90% (Hard) against an average player",
   "url": "https://github.com/Orangitaz/OrangitazSpades/releases/latest"
 }
